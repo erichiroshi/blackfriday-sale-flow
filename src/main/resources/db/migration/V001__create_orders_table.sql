@@ -4,7 +4,7 @@ CREATE TABLE orders (
                         customer_id     VARCHAR(64)  NOT NULL,
                         idempotency_key VARCHAR(128) NOT NULL,
                         quantity        INTEGER      NOT NULL CHECK (quantity > 0),
-                        status          VARCHAR(16)  NOT NULL CHECK (status IN ('RESERVED', 'CONFIRMED', 'FAILED')),
+                        status          VARCHAR(16)  NOT NULL CHECK (status IN ('RESERVED', 'CONFIRMED', 'FAILED', 'REFUNDED')),
                         created_at      TIMESTAMPTZ  NOT NULL,
 
                         CONSTRAINT uk_orders_idempotency_key UNIQUE (idempotency_key)

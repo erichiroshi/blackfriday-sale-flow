@@ -3,35 +3,51 @@ package com.erichiroshi.blackfridaysaleflow.sale.infrastructure.adapter.out.data
 import com.erichiroshi.blackfridaysaleflow.sale.application.port.out.OrderPersistencePort;
 import com.erichiroshi.blackfridaysaleflow.sale.domain.model.Order;
 import com.erichiroshi.blackfridaysaleflow.sale.domain.model.OrderId;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Component
 public class OrderPersistenceAdapter implements OrderPersistencePort {
 
     private final OrderJpaRepository orderJpaRepository;
+    private final JdbcTemplate jdbcTemplate;
 
-    public OrderPersistenceAdapter(OrderJpaRepository orderJpaRepository) {
+    public OrderPersistenceAdapter(OrderJpaRepository orderJpaRepository, JdbcTemplate jdbcTemplate) {
         this.orderJpaRepository = orderJpaRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     /**
-     * All 200 (or however many) rows are written in a single transaction.
-     * If the driver throws mid-batch, Spring rolls back the whole thing —
-     * that is precisely what lets the RabbitMQ container retry the batch
-     * safely without risking a half-persisted state.
+     * All rows are written via a single JDBC batch (one round-trip to the
+     * driver, not N), wrapped in one transaction: if any row in the batch
+     * fails, everything rolls back so the RabbitMQ consumer can safely
+     * retry the whole batch.
      */
     @Override
     @Transactional
     public void saveAll(List<Order> orders) {
-        List<OrderJpaEntity> entities = orders.stream()
-                .map(OrderJpaMapper::toEntity)
-                .toList();
-        orderJpaRepository.saveAll(entities);
+        jdbcTemplate.batchUpdate(
+                OrderBatchInsertSetter.INSERT_SQL,
+                orders,
+                orders.size(),
+                OrderBatchInsertSetter::bind);
+    }
+
+    /**
+     * Single-row update (e.g. CONFIRMED -> REFUNDED). Not a hot path, so
+     * plain JPA is simpler here than hand-written JDBC.
+     */
+    @Override
+    @Transactional
+    public void update(Order order) {
+        OrderJpaEntity entity = orderJpaRepository.findById(order.id().value())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Cannot update order %s: no row found".formatted(order.id())));
+        orderJpaRepository.save(OrderJpaMapper.applyDomainStatus(entity, order));
     }
 
     @Override

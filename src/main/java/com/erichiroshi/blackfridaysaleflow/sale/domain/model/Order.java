@@ -25,8 +25,8 @@ public final class Order {
     private OrderStatus status;
 
     private Order(OrderId id, ProductId productId, CustomerId customerId,
-                   IdempotencyKey idempotencyKey, int quantity, Instant createdAt,
-                   OrderStatus status) {
+                  IdempotencyKey idempotencyKey, int quantity, Instant createdAt,
+                  OrderStatus status) {
         this.id = Objects.requireNonNull(id);
         this.productId = Objects.requireNonNull(productId);
         this.customerId = Objects.requireNonNull(customerId);
@@ -44,7 +44,7 @@ public final class Order {
      * decremented in Redis. Always starts as RESERVED.
      */
     public static Order reserve(OrderId id, ProductId productId, CustomerId customerId,
-                                 IdempotencyKey idempotencyKey, int quantity, Instant createdAt) {
+                                IdempotencyKey idempotencyKey, int quantity, Instant createdAt) {
         return new Order(id, productId, customerId, idempotencyKey, quantity, createdAt, OrderStatus.RESERVED);
     }
 
@@ -53,8 +53,8 @@ public final class Order {
      * Bypasses no invariant — same validation applies.
      */
     public static Order restore(OrderId id, ProductId productId, CustomerId customerId,
-                                 IdempotencyKey idempotencyKey, int quantity, Instant createdAt,
-                                 OrderStatus status) {
+                                IdempotencyKey idempotencyKey, int quantity, Instant createdAt,
+                                OrderStatus status) {
         return new Order(id, productId, customerId, idempotencyKey, quantity, createdAt, status);
     }
 
@@ -72,6 +72,17 @@ public final class Order {
     public void fail() {
         requireStatus(OrderStatus.RESERVED, "fail");
         this.status = OrderStatus.FAILED;
+    }
+
+    /**
+     * Transition triggered by the refund flow. Only a CONFIRMED order (one
+     * that was actually persisted and fulfilled) can be refunded — refunding
+     * a RESERVED or FAILED order makes no business sense since it was never
+     * truly completed.
+     */
+    public void refund() {
+        requireStatus(OrderStatus.CONFIRMED, "refund");
+        this.status = OrderStatus.REFUNDED;
     }
 
     private void requireStatus(OrderStatus expected, String action) {

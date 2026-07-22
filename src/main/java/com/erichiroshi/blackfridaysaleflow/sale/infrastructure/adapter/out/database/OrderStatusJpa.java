@@ -8,5 +8,6 @@ package com.erichiroshi.blackfridaysaleflow.sale.infrastructure.adapter.out.data
 public enum OrderStatusJpa {
     RESERVED,
     CONFIRMED,
-    FAILED
+    FAILED,
+    REFUNDED
 }

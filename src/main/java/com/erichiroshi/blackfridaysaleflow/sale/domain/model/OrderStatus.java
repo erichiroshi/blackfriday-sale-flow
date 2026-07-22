@@ -7,9 +7,12 @@ package com.erichiroshi.blackfridaysaleflow.sale.domain.model;
  *              row not yet persisted in Postgres.
  * CONFIRMED -> batch worker successfully persisted the order.
  * FAILED    -> batch worker exhausted retries; Redis stock was compensated (INCR).
+ * REFUNDED  -> a previously CONFIRMED order was refunded; Redis stock was
+ *              released back for resale.
  */
 public enum OrderStatus {
     RESERVED,
     CONFIRMED,
-    FAILED
+    FAILED,
+    REFUNDED
 }

@@ -1,6 +1,8 @@
 package com.erichiroshi.blackfridaysaleflow.sale.infrastructure.adapter.in.web;
 
+import com.erichiroshi.blackfridaysaleflow.sale.domain.exception.InvalidOrderStateTransitionException;
 import com.erichiroshi.blackfridaysaleflow.sale.domain.exception.OutOfStockException;
+import com.erichiroshi.blackfridaysaleflow.sale.domain.exception.ProductAlreadyExistsException;
 import com.erichiroshi.blackfridaysaleflow.sale.domain.exception.RecordNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDto> handleNotFound(RecordNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorResponseDto.of("NOT_FOUND", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ProductAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponseDto> handleProductAlreadyExists(ProductAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponseDto.of("PRODUCT_ALREADY_EXISTS", ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidOrderStateTransitionException.class)
+    public ResponseEntity<ErrorResponseDto> handleInvalidTransition(InvalidOrderStateTransitionException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponseDto.of("INVALID_STATE_TRANSITION", ex.getMessage()));
     }
 
     @ExceptionHandler(MissingRequestHeaderException.class)

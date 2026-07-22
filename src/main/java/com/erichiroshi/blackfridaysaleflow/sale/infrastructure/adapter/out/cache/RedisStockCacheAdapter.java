@@ -30,7 +30,7 @@ public class RedisStockCacheAdapter implements StockCachePort {
     private final DefaultRedisScript<Long> reserveStockScript;
 
     public RedisStockCacheAdapter(StringRedisTemplate redisTemplate,
-                                   DefaultRedisScript<Long> reserveStockScript) {
+                                  DefaultRedisScript<Long> reserveStockScript) {
         this.redisTemplate = redisTemplate;
         this.reserveStockScript = reserveStockScript;
     }
@@ -60,6 +60,38 @@ public class RedisStockCacheAdapter implements StockCachePort {
         String key = stockKey(productId);
         Long newValue = redisTemplate.opsForValue().increment(key);
         log.info("Released 1 unit of stock for product {} (new counter value: {})", productId.value(), newValue);
+    }
+
+    @Override
+    public boolean initialize(ProductId productId, long initialStock) {
+        String key = stockKey(productId);
+        Boolean created = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(initialStock));
+        boolean wasCreated = Boolean.TRUE.equals(created);
+        if (wasCreated) {
+            log.info("Initialized stock for product {} with {} units", productId.value(), initialStock);
+        } else {
+            log.info("Stock for product {} already initialized, skipping", productId.value());
+        }
+        return wasCreated;
+    }
+
+    /**
+     * Note: the exists-check and the increment are two round-trips, not one
+     * atomic operation. That is an acceptable trade-off here because this is
+     * an admin/low-frequency path (replenishing stock), never the hot
+     * reservation path where 10k concurrent requests would make such a race
+     * matter.
+     */
+    @Override
+    public long replenish(ProductId productId, long additionalUnits) {
+        String key = stockKey(productId);
+        if (Boolean.FALSE.equals(redisTemplate.hasKey(key))) {
+            throw new IllegalStateException(
+                    "Cannot replenish product %s: it was never initialized".formatted(productId.value()));
+        }
+        Long newTotal = redisTemplate.opsForValue().increment(key, additionalUnits);
+        log.info("Replenished product {} by {} units (new total: {})", productId.value(), additionalUnits, newTotal);
+        return newTotal;
     }
 
     private String stockKey(ProductId productId) {

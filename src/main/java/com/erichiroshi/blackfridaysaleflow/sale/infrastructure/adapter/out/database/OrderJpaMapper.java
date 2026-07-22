@@ -12,15 +12,14 @@ final class OrderJpaMapper {
     private OrderJpaMapper() {
     }
 
-    static OrderJpaEntity toEntity(Order order) {
-        return new OrderJpaEntity(
-                order.id().value(),
-                order.productId().value(),
-                order.customerId().value(),
-                order.idempotencyKey().value(),
-                order.quantity(),
-                order.createdAt(),
-                toJpaStatus(order.status()));
+    /**
+     * Applies the domain order's current status onto an already-loaded JPA
+     * entity, for the single-row update path (e.g. refund). Every other
+     * field is immutable once the row exists, so only status is copied.
+     */
+    static OrderJpaEntity applyDomainStatus(OrderJpaEntity entity, Order order) {
+        entity.setStatus(toJpaStatus(order.status()));
+        return entity;
     }
 
     static Order toDomain(OrderJpaEntity entity) {

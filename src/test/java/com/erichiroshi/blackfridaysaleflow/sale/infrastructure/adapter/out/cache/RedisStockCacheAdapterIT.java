@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Proves the core correctness property of this whole architecture: with 100
@@ -116,5 +117,37 @@ class RedisStockCacheAdapterIT {
 
         String remaining = redisTemplate.opsForValue().get("stock:" + productId.value());
         assertThat(remaining).isEqualTo(String.valueOf(INITIAL_STOCK - 1));
+    }
+
+    @Test
+    void initializeCreatesCounterOnlyOnce() {
+        ProductId newProduct = ProductId.of("TV");
+        redisTemplate.delete("stock:" + newProduct.value());
+
+        boolean firstCall = adapter.initialize(newProduct, 1200);
+        boolean secondCall = adapter.initialize(newProduct, 999);
+
+        assertThat(firstCall).isTrue();
+        assertThat(secondCall).isFalse();
+        // Second call must NOT have overwritten the counter back to 999.
+        assertThat(redisTemplate.opsForValue().get("stock:" + newProduct.value())).isEqualTo("1200");
+
+        redisTemplate.delete("stock:" + newProduct.value());
+    }
+
+    @Test
+    void replenishAddsUnitsAtomicallyToAnExistingProduct() {
+        long newTotal = adapter.replenish(productId, 50);
+
+        assertThat(newTotal).isEqualTo(INITIAL_STOCK + 50);
+    }
+
+    @Test
+    void replenishThrowsWhenProductWasNeverInitialized() {
+        ProductId unknownProduct = ProductId.of("UNKNOWN");
+        redisTemplate.delete("stock:" + unknownProduct.value());
+
+        assertThatThrownBy(() -> adapter.replenish(unknownProduct, 10))
+                .isInstanceOf(IllegalStateException.class);
     }
 }

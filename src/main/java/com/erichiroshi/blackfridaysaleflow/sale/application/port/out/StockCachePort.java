@@ -24,7 +24,25 @@ public interface StockCachePort {
     /**
      * Compensates a previously successful reservation (increments the
      * counter back). Used by the batch worker when persistence permanently
-     * fails after exhausting retries.
+     * fails after exhausting retries, and by the refund flow.
      */
     void release(ProductId productId);
+
+    /**
+     * Creates the stock counter for a product, only if it does not already
+     * exist (SETNX semantics) — restarting the app or re-running the seed
+     * never resets stock mid-sale.
+     *
+     * @return true if this call created the counter, false if it already existed.
+     */
+    boolean initialize(ProductId productId, long initialStock);
+
+    /**
+     * Atomically adds units to an existing counter (e.g. an admin
+     * replenishing stock while the sale is live).
+     *
+     * @return the new total after the increment.
+     * @throws IllegalStateException if the product was never initialized.
+     */
+    long replenish(ProductId productId, long additionalUnits);
 }

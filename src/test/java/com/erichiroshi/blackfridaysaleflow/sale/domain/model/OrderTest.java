@@ -50,6 +50,35 @@ class OrderTest {
     }
 
     @Test
+    void refundTransitionsConfirmedToRefunded() {
+        Order order = newReservedOrder();
+        order.confirm();
+        order.refund();
+        assertThat(order.status()).isEqualTo(OrderStatus.REFUNDED);
+    }
+
+    @Test
+    void cannotRefundAReservedOrder() {
+        Order order = newReservedOrder();
+        assertThatThrownBy(order::refund).isInstanceOf(InvalidOrderStateTransitionException.class);
+    }
+
+    @Test
+    void cannotRefundAFailedOrder() {
+        Order order = newReservedOrder();
+        order.fail();
+        assertThatThrownBy(order::refund).isInstanceOf(InvalidOrderStateTransitionException.class);
+    }
+
+    @Test
+    void cannotRefundAnAlreadyRefundedOrder() {
+        Order order = newReservedOrder();
+        order.confirm();
+        order.refund();
+        assertThatThrownBy(order::refund).isInstanceOf(InvalidOrderStateTransitionException.class);
+    }
+
+    @Test
     void rejectsNonPositiveQuantity() {
         OrderId orderId = OrderId.newId();
         ProductId productId = ProductId.of("PRODUCT-1");

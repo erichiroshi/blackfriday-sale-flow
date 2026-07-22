@@ -19,19 +19,27 @@ repositories {
 }
 
 ext {
+	aopVersion            = '3.5.13'
+	resilience4jVersion   = '2.4.0'
+
 	testcontainersVersion = '2.0.4'
 }
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
-	implementation 'org.springframework.retry:spring-retry:2.0.13'
 	runtimeOnly 'org.springframework.boot:spring-boot-docker-compose'
 
+	// Resiliência
+	implementation "org.springframework.boot:spring-boot-starter-aop:${aopVersion}"
+	implementation "io.github.resilience4j:resilience4j-spring-boot4:${resilience4jVersion}"
+
+	// Persistência + Flyway
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-flyway'
 	runtimeOnly 'org.postgresql:postgresql'
 	runtimeOnly("org.flywaydb:flyway-database-postgresql")

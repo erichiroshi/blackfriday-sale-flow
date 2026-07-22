@@ -33,13 +33,25 @@ server:
 
 app:
   demo:
-    product-id: PRODUCT-1
-    initial-stock: 100
+    products:
+      - id: TV
+        initial-stock: 1200
+      - id: PC
+        initial-stock: 1450
+      - id: GELADEIRA
+        initial-stock: 3000
+
+resilience4j:
   retry:
-    max-attempts: 3
-    initial-interval-ms: 1000
-    multiplier: 2.0
-    max-interval-ms: 4000
+    instances:
+      orderBatchPersistence:
+        max-attempts: 3
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        exponential-max-wait-duration: 4s
+        retry-exceptions:
+          - java.lang.Exception
 
 management:
   endpoints:

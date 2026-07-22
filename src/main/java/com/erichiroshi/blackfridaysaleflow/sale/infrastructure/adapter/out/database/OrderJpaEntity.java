@@ -48,7 +48,7 @@ public class OrderJpaEntity {
     }
 
     public OrderJpaEntity(UUID id, String productId, String customerId, String idempotencyKey,
-                           int quantity, Instant createdAt, OrderStatusJpa status) {
+                          int quantity, Instant createdAt, OrderStatusJpa status) {
         this.id = id;
         this.productId = productId;
         this.customerId = customerId;
@@ -84,5 +84,14 @@ public class OrderJpaEntity {
 
     public OrderStatusJpa getStatus() {
         return status;
+    }
+
+    /**
+     * Package-private on purpose: only {@link OrderJpaMapper} (via
+     * {@link OrderPersistenceAdapter#update}) mutates status after the row
+     * already exists. Nothing else in this adapter package needs write access.
+     */
+    void setStatus(OrderStatusJpa status) {
+        this.status = status;
     }
 }

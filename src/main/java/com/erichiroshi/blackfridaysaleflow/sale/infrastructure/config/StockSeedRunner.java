@@ -1,44 +1,54 @@
 package com.erichiroshi.blackfridaysaleflow.sale.infrastructure.config;
 
+import com.erichiroshi.blackfridaysaleflow.sale.application.port.in.ManageProductStockUseCase;
+import com.erichiroshi.blackfridaysaleflow.sale.domain.exception.ProductAlreadyExistsException;
+import com.erichiroshi.blackfridaysaleflow.sale.domain.model.ProductId;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Seeds the Redis stock counter for the demo product at startup, only if it
- * does not already exist (so restarting the app mid-sale never resets the
- * counter back to full stock).
+ * Seeds the demo catalog (TV, PC, GELADEIRA, ... — configured via
+ * {@code app.demo.products} in application.yml) at startup, going through
+ * the same {@link ManageProductStockUseCase} the admin endpoint uses — no
+ * duplicated Redis logic between "seed at boot" and "create via API".
+ *
+ * Idempotent: relies on the use case's underlying SETNX semantics, so
+ * restarting the app mid-sale never resets stock back to full. A product
+ * that already exists is logged and skipped, not treated as an error.
  */
+@EnableConfigurationProperties(DemoProductsProperties.class)
 @Component
 public class StockSeedRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(StockSeedRunner.class);
-    private static final String KEY_PREFIX = "stock:";
 
-    private final StringRedisTemplate redisTemplate;
+    private final ManageProductStockUseCase manageProductStockUseCase;
+    private final DemoProductsProperties demoProductsProperties;
 
-    @Value("${app.demo.product-id:PRODUCT-1}")
-    private String demoProductId;
-
-    @Value("${app.demo.initial-stock:100}")
-    private long initialStock;
-
-    public StockSeedRunner(StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
+    public StockSeedRunner(ManageProductStockUseCase manageProductStockUseCase,
+                           DemoProductsProperties demoProductsProperties) {
+        this.manageProductStockUseCase = manageProductStockUseCase;
+        this.demoProductsProperties = demoProductsProperties;
     }
 
     @Override
-    public void run(ApplicationArguments args) {
-        String key = KEY_PREFIX + demoProductId;
-        Boolean seeded = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(initialStock));
-        if (Boolean.TRUE.equals(seeded)) {
-            log.info("Seeded stock for product {} with {} units", demoProductId, initialStock);
-        } else {
-            log.info("Stock key {} already present, skipping seed", key);
+    public void run(@NonNull ApplicationArguments args) {
+        for (DemoProductsProperties.ProductSeed seed : demoProductsProperties.getProducts()) {
+            seedOne(seed);
+        }
+    }
+
+    private void seedOne(DemoProductsProperties.ProductSeed seed) {
+        try {
+            manageProductStockUseCase.createProduct(ProductId.of(seed.id()), seed.initialStock());
+            log.info("Seeded stock for product {} with {} units", seed.id(), seed.initialStock());
+        } catch (ProductAlreadyExistsException _) {
+            log.info("Product {} already has stock initialized, skipping seed", seed.id());
         }
     }
 }

@@ -14,11 +14,19 @@ import java.util.Optional;
 public interface OrderPersistencePort {
 
     /**
-     * Persists (insert-or-update) the given batch in a single transaction.
-     * Must be all-or-nothing: a partial failure rolls back the whole batch,
-     * so the caller can safely retry.
+     * Batch-inserts new orders in a single transaction. Must be all-or-nothing:
+     * a partial failure rolls back the whole batch, so the caller can safely
+     * retry. Every order here is being persisted for the first time — use
+     * {@link #update(Order)} for changes to an already-persisted order.
      */
     void saveAll(List<Order> orders);
+
+    /**
+     * Updates a single, already-persisted order (e.g. a CONFIRMED -> REFUNDED
+     * transition). Distinct from {@link #saveAll(List)}, which is the
+     * high-throughput batch-insert path used by the worker.
+     */
+    void update(Order order);
 
     Optional<Order> findById(OrderId orderId);
 }
