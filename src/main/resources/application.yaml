@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: blackfriday-sale-flow
+
+  datasource:
+    hikari:
+      # High demand -> keep this generous but bounded; batch persistence
+      # runs on its own listener thread pool, not the web request threads.
+      maximum-pool-size: 20
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 200
+        order_inserts: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+
+  rabbitmq:
+    listener:
+      simple:
+        prefetch: 250
+
+server:
+  port: 8080
+
+app:
+  demo:
+    product-id: PRODUCT-1
+    initial-stock: 100
+  retry:
+    max-attempts: 3
+    initial-interval-ms: 1000
+    multiplier: 2.0
+    max-interval-ms: 4000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+
+logging:
+  level:
+    com.blackfriday.sale: INFO
