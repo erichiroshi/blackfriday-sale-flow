@@ -19,12 +19,12 @@ import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 /**
  * RabbitMQ topology and batch-consumption wiring.
- *
+
  * Topology: a direct exchange -> main queue, with a dead-letter exchange/queue
  * attached for operational visibility (messages that end up permanently
  * failed are still routed there after this app's own compensation logic
  * runs — see {@link com.erichiroshi.blackfridaysaleflow.sale.infrastructure.adapter.in.event.OrderBatchConsumer}).
- *
+
  * Batch consumption: the container factory is configured for batches of 200
  * with a timeout, so the worker never waits forever for a straggling 200th
  * message during low-traffic periods.
@@ -104,9 +104,12 @@ public class RabbitConfig {
     @Bean
     public SimpleRabbitListenerContainerFactory batchRabbitListenerContainerFactory(
             ConnectionFactory connectionFactory, MessageConverter jsonMessageConverter) {
+
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(jsonMessageConverter);
+
+        // Ativa o consumo em lote na fila
         factory.setBatchListener(true);
         factory.setConsumerBatchEnabled(true);
         factory.setBatchSize(BATCH_SIZE);
