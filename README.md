@@ -6,6 +6,8 @@ Postgres via RabbitMQ). Arquitetura Hexagonal (Ports & Adapters).
 
 ---
 
+[![CI](https://github.com/erichiroshi/blackfriday-sale-flow/actions/workflows/ci.yml/badge.svg)](https://github.com/erichiroshi/blackfriday-sale-flow/actions/workflows/ci.yml)
+
 <p align="center">
   <img src="https://img.shields.io/badge/Java-25-orange?logo=openjdk&logoColor=white" alt="Java 25"/>
   <img src="https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot 4.1.0"/>
@@ -24,8 +26,31 @@ Postgres via RabbitMQ). Arquitetura Hexagonal (Ports & Adapters).
 
 ---
 
+## 📖 Sobre este projeto
+
+Imagine uma Black Friday: um produto tem 100 unidades e, em poucos segundos,
+10.000 pessoas clicam em "Comprar". Esse projeto é uma implementação prática
+do cenário — o mesmo problema de **alta demanda, concorrência e consistência
+de estoque** que existe em qualquer venda flash real.
+
+A diferença entre isso e um CRUD comum: aqui cada requisição carrega
+perguntas que um CRUD nunca precisa responder — como evitar vender o mesmo
+produto duas vezes se o cliente reenviar a requisição (idempotência), como
+garantir que o contador de estoque nunca fique negativo sob concorrência
+real, e como desacoplar "responder rápido ao cliente" de "persistir com
+segurança no banco".
+
+O projeto resolve isso combinando **Redis** (reserva atômica em <2ms) +
+**RabbitMQ** (absorve o pico sem afogar o banco) + **PostgreSQL** (fonte da
+verdade, persistida em lote), com retry declarativo via Resilience4j e
+testes com Testcontainers provando que, sob 500 requisições concorrentes
+contra 100 unidades, exatamente 100 sucedem — nunca mais, nunca menos.
+
+---
+
 ## 📑 Índice
 
+- [Sobre este projeto](#-sobre-este-projeto)
 - [Stacks utilizadas](#-stacks-utilizadas)
 - [Pré-requisitos](#-pré-requisitos)
 - [Quick Start](#-quick-start)
